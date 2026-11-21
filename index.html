@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAO Wirephoto Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--olive:#3b4128;--olive-d:#23271a;--field:#262a1a;--khaki:#c8b77a;--cream:#e6e0c4;--muted:#b9b394;--orange:#ff9a3c;--grey:#6e6c54}
+  *{box-sizing:border-box}
+  body{margin:0;background:#15170f;color:var(--cream);font-family:"Roboto Condensed",sans-serif;min-height:100vh}
+  .wrap{max-width:980px;margin:0 auto;padding:20px}
+  .panel{background:var(--olive);border:3px solid var(--olive-d)}
+  header{padding:16px 22px;border-bottom:3px solid var(--olive-d);display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .sub{font-size:13px;color:var(--muted);letter-spacing:.08em}
+  h1{margin:2px 0 0;font-size:34px;letter-spacing:.02em}
+  .form{font-size:13px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:0}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .side{padding:18px 22px;border-right:3px solid var(--olive-d)}
+  @media(max-width:760px){.side{border-right:0;border-bottom:3px solid var(--olive-d)}}
+  .main{padding:18px 22px}
+  label.l{display:block;font-weight:700;font-size:14px;color:#d6cfae;margin:14px 0 6px;letter-spacing:.04em}
+  label.l:first-child{margin-top:0}
+  .drop{border:2px dashed var(--khaki);background:var(--field);padding:22px 12px;text-align:center;cursor:pointer;color:var(--muted);font-size:14px}
+  .drop.on{background:#343a22;color:var(--cream)}
+  .drop b{color:var(--cream);display:block;font-size:17px;margin-bottom:4px}
+  input[type=text],select{width:100%;background:var(--field);border:0;color:#f0ead0;padding:10px;font:600 15px "IBM Plex Mono",monospace}
+  input[type=range]{width:100%;accent-color:var(--khaki)}
+  .row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:12px;color:var(--cream)}
+  .print{background:#f4f1e8;padding:14px;border:2px solid #cfcab9;max-width:620px}
+  canvas#out{width:100%;display:block;background:#28291f;image-rendering:auto}
+  .stamp{display:flex;justify-content:space-between;font:600 13px "IBM Plex Mono",monospace;color:#2a2620;margin-top:8px}
+  .stamp span:first-child{color:#c0661c}
+  .btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  button{border:0;padding:12px 18px;font:700 16px "Roboto Condensed",sans-serif;letter-spacing:.04em;cursor:pointer}
+  .pri{background:var(--khaki);color:#1d2013}
+  .sec{background:var(--grey);color:var(--cream)}
+  button:disabled{opacity:.45;cursor:default}
+  .msg{font-size:14px;margin-top:10px;min-height:20px;color:var(--orange);font-weight:700}
+  .steps{margin-top:18px;background:var(--olive-d);padding:14px 16px;font-size:14px;line-height:1.55;color:#d6cfae}
+  .steps code{font-family:"IBM Plex Mono",monospace;background:#15170f;padding:1px 5px;color:var(--cream);font-size:12.5px;word-break:break-all}
+  .steps ol{margin:6px 0 0;padding-left:20px}
+  textarea{width:100%;height:110px;margin-top:12px;background:#15170f;color:#9d987c;border:0;font:11px/1.2 "IBM Plex Mono",monospace;padding:8px;resize:vertical}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="panel">
+  <header>
+   <div><div class="sub">GAME MASTER · S2 PHOTO SECTION</div><h1>WIREPHOTO CONVERTER</h1></div>
+   <div class="form">FORM WP-12 · OUTPUT: AAOWP .TXT</div>
+  </header>
+  <div class="grid">
+   <div class="side">
+    <label class="l">01 · SOURCE IMAGE</label>
+    <div class="drop" id="drop"><b>DROP IMAGE HERE</b>or tap to choose (JPG, PNG)</div>
+    <input type="file" id="file" accept="image/*" hidden>
+
+    <label class="l">02 · FILE NAME</label>
+    <input type="text" id="name" value="RECON_01" maxlength="40" spellcheck="false">
+
+    <label class="l">03 · RESOLUTION</label>
+    <select id="res">
+     <option value="96x64">96 × 64 · coarse</option>
+     <option value="120x80" selected>120 × 80 · standard</option>
+     <option value="150x100">150 × 100 · fine</option>
+    </select>
+
+    <label class="l">04 · BRIGHTNESS</label>
+    <input type="range" id="bri" min="-60" max="60" value="0">
+    <div class="row"><span>DARK</span><span id="briV">0</span><span>LIGHT</span></div>
+
+    <label class="l">05 · CONTRAST</label>
+    <input type="range" id="con" min="-50" max="100" value="15">
+    <div class="row"><span>FLAT</span><span id="conV">15</span><span>HARSH</span></div>
+
+    <label class="chk"><input type="checkbox" id="grain" checked> Add transmission grain</label>
+    <label class="chk"><input type="checkbox" id="fit"> Fit whole image (letterbox)</label>
+   </div>
+
+   <div class="main">
+    <div class="print">
+     <canvas id="out" width="780" height="520"></canvas>
+     <div class="stamp"><span id="stampL">AWAITING SIGNAL</span><span id="stampR">—</span></div>
+    </div>
+    <div class="btns">
+     <button class="pri" id="dl" disabled>SAVE .TXT FILE</button>
+     <button class="sec" id="copy" disabled>COPY FILE TEXT</button>
+     <button class="sec" id="sample">LOAD TEST PATTERN</button>
+    </div>
+    <div class="msg" id="msg"></div>
+    <textarea id="txt" readonly placeholder="File text appears here."></textarea>
+    <div class="steps">
+     <b>TO SEND IT TO THE SERVER</b>
+     <ol>
+      <li>Press <b>SAVE .TXT FILE</b> (or <b>COPY FILE TEXT</b>, paste into Notepad and save as <code id="fn">RECON_01.txt</code>)</li>
+      <li>Put it in the server's profile folder: <code>profile/AAO_Intel/Wirephotos/</code><br>(Workbench: <code>Documents/My Games/ArmaReforgerWorkbench/profile/AAO_Intel/Wirephotos</code>)</li>
+      <li>In GM, right-click the Intel Packet → Edit → <b>PICTURE</b> → <b>WIREPHOTO</b>. New files show up when you press the faction arrows (refresh). No restart needed.</li>
+     </ol>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const out=$('out'), octx=out.getContext('2d');
+const HEX='0123456789abcdef';
+let img=null, levels=null, W=120, H=80;
+
+function tone(l){const t=l/15;return [27+(233-27)*t,26+(227-26)*t,23+(210-23)*t].map(Math.round);}
+
+function load(file){
+  if(!file||!file.type.startsWith('image/')){$('msg').textContent='That is not an image file.';return;}
+  const r=new FileReader();
+  r.onload=e=>{const i=new Image();i.onload=()=>{img=i;
+    const base=file.name.replace(/\.[^.]+$/,'').toUpperCase().replace(/[^A-Z0-9_-]+/g,'_').slice(0,40);
+    if(base) $('name').value=base; render();};i.src=e.target.result;};
+  r.readAsDataURL(file);
+}
+
+function render(){
+  if(!img) return;
+  [W,H]=$('res').value.split('x').map(Number);
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');x.fillStyle='#808080';x.fillRect(0,0,W,H);
+  x.imageSmoothingQuality='high';
+  const ir=img.width/img.height, tr=W/H;
+  let sw=img.width, sh=img.height, sx=0, sy=0, dx=0, dy=0, dw=W, dh=H;
+  if($('fit').checked){ if(ir>tr){dh=W/ir;dy=(H-dh)/2;} else {dw=H*ir;dx=(W-dw)/2;} }
+  else { if(ir>tr){sw=img.height*tr;sx=(img.width-sw)/2;} else {sh=img.width/tr;sy=(img.height-sh)/2;} }
+  x.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh);
+  const d=x.getImageData(0,0,W,H).data;
+  const bri=+$('bri').value, con=+$('con').value, f=(259*(con+255))/(255*(259-con));
+  const grain=$('grain').checked;
+  let seed=1234;const rnd=()=>((seed=(seed*16807)%2147483647)/2147483647);
+  levels=new Uint8Array(W*H);
+  for(let i=0;i<W*H;i++){
+    let g=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+    g=f*(g-128)+128+bri;
+    if(grain) g+=(rnd()-0.5)*18;
+    levels[i]=Math.max(0,Math.min(15,Math.floor(g/16)));
+  }
+  draw(); emit();
+}
+
+function draw(){
+  const cw=out.width, ch=out.height, cx=cw/W, cy=ch/H;
+  octx.fillStyle='rgb(214,207,188)';octx.fillRect(0,0,cw,ch);
+  for(let y=0;y<H;y++){
+    let start=0, lv=levels[y*W];
+    for(let xx=1;xx<=W;xx++){
+      const l= xx<W ? levels[y*W+xx] : -1;
+      if(l===lv) continue;
+      const [r,g,b]=tone(lv);octx.fillStyle=`rgb(${r},${g},${b})`;
+      octx.fillRect(start*cx,y*cy,(xx-start)*cx+0.6,cy*0.82);
+      start=xx; lv=l;
+    }
+  }
+  $('stampL').textContent='WIREPHOTO RECEIVED';
+  $('stampR').textContent=`${W} × ${H} · 16 TONES`;
+}
+
+function emit(){
+  let s=`AAOWP ${W} ${H}\n`;
+  for(let y=0;y<H;y++){let row='';for(let xx=0;xx<W;xx++) row+=HEX[levels[y*W+xx]];s+=row+'\n';}
+  $('txt').value=s; $('copy').disabled=false; $('dl').disabled=false;
+  $('msg').textContent='';
+}
+
+function safeName(){return ($('name').value.trim().toUpperCase().replace(/[^A-Z0-9_-]+/g,'_')||'RECON_01');}
+function updName(){$('fn').textContent=safeName()+'.txt';}
+
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>load(e.target.files[0]);
+['dragenter','dragover'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('on');}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('on');}));
+$('drop').addEventListener('drop',e=>load(e.dataTransfer.files[0]));
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);});
+['res','bri','con','grain','fit'].forEach(id=>$(id).addEventListener('input',()=>{$('briV').textContent=$('bri').value;$('conV').textContent=$('con').value;render();}));
+$('name').addEventListener('input',updName);
+$('copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText($('txt').value);$('msg').textContent=`Copied. Save it as ${safeName()}.txt`;}
+  catch(e){$('txt').select();$('msg').textContent='Copy blocked here — the text is selected, press Ctrl+C.';}
+};
+$('dl').onclick=()=>{
+  try{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([$('txt').value],{type:'text/plain'}));
+    a.download=safeName()+'.txt';
+    document.body.appendChild(a);a.click();a.remove();
+    $('msg').textContent=`Saved ${safeName()}.txt to your Downloads folder.`;
+  }catch(e){$('msg').textContent='Saving is blocked here — use COPY FILE TEXT instead.';}
+};
+$('sample').onclick=()=>{
+  const c=document.createElement('canvas');c.width=600;c.height=400;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,400);g.addColorStop(0,'#ddd');g.addColorStop(1,'#777');x.fillStyle=g;x.fillRect(0,0,600,400);
+  x.fillStyle='#555';x.beginPath();x.moveTo(0,250);x.lineTo(150,190);x.lineTo(330,230);x.lineTo(600,180);x.lineTo(600,400);x.lineTo(0,400);x.fill();
+  x.fillStyle='#222';x.fillRect(360,270,120,34);x.fillRect(395,252,46,22);x.fillRect(436,258,70,6);
+  for(let i=0;i<5;i++){x.beginPath();x.arc(372+i*24,308,10,0,7);x.fill();}
+  const i=new Image();i.onload=()=>{img=i;$('name').value='TEST_PATTERN';updName();render();};i.src=c.toDataURL();
+};
+updName();
+</script>
+</body>
+</html>
